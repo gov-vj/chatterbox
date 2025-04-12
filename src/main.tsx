@@ -1,25 +1,26 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import './index.css'
-import LoginPage from "./pages/LoginPage";
+import LoginPage from "./pages/LoginPage"
+import ProtectedRoute from './components/ProtectedRoute'
 
-createRoot(document.getElementById('root')!).render(
+// eslint-disable-next-line react-refresh/only-export-components
+const ChatPagePlaceholder = () => <div>Chat Page</div>;
+
+const rootElement = document.getElementById('root')!;
+
+createRoot(rootElement).render(
   <StrictMode>
     <BrowserRouter>
       <Routes>
-        {/* Route for the login page */}
         <Route path="/login" element={<LoginPage />} />
-
-        {/* Placeholder for the chat page (we'll protect it later) */}
-        <Route path="/chat" element={<div>Chat Page Placeholder</div>} />
-
-        {/* Redirect root path to login page initially */}
+        <Route element={<ProtectedRoute />}>
+          <Route path="/chat" element={<ChatPagePlaceholder />} />
+        </Route>
         <Route path="/" element={<Navigate to="/login" replace />} />
-
-        {/* You might have other routes within App or handle them differently */}
-        {/* Example if App contains other layout: <Route path="/*" element={<App />} /> */}
+        <Route path="*" element={<div style={{ padding: '50px', textAlign: 'center' }}><h2>404 - Page Not Found</h2></div>} />
       </Routes>
     </BrowserRouter>
   </StrictMode>,
-)
+);
