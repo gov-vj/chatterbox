@@ -3,12 +3,8 @@ import MessageList from '../components/MessageList';
 import MessageInput from '../components/MessageInput';
 import { supabase } from '../supabaseClient';
 import { User } from '@supabase/supabase-js';
-
-interface UserProfile {
-  id: string;
-  display_name: string;
-  email: string;
-}
+import {useNavigate} from "react-router-dom";
+import { DbMessage, UserProfile } from '../types';
 
 const USER_ONE_EMAIL = import.meta.env.VITE_ALLOWED_USER_1_EMAIL;
 const USER_TWO_EMAIL = import.meta.env.VITE_ALLOWED_USER_2_EMAIL;
@@ -16,6 +12,8 @@ const USER_TWO_EMAIL = import.meta.env.VITE_ALLOWED_USER_2_EMAIL;
 const ChatPage = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [otherUserProfile, setOtherUserProfile] = useState<UserProfile | null>(null);
+  const [messages, setMessages] = useState<DbMessage[]>([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -40,6 +38,27 @@ const ChatPage = () => {
     };
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (!otherUserProfile || !currentUser) {
+      return;
+    }
+
+    const fetchMessages = async () => {
+      const userId1 = currentUser.id;
+      const userId2 = otherUserProfile.id;
+
+      const { data } = await supabase
+        .from('messages')
+        .select('*')
+        .or(`(sender_id = '${userId1}' AND receiver_id = '${userId2}'), (sender_id = '${userId2}' AND receiver_id = '${userId1}')`)
+        .order('created_at', { ascending: true });
+
+      setMessages(data as DbMessage[] ?? []);
+    };
+
+    fetchMessages();
+  }, [currentUser, otherUserProfile]);
   const handleSendMessage = (message: string) => {
     console.log('Sending message:', message);
   };
@@ -51,7 +70,7 @@ const ChatPage = () => {
       console.error("Sign out error:", error);
       alert(`Error signing out: ${error.message}`);
     } else {
-      console.log('Signed out successfully.');
+      navigate('/login')
     }
   };
 
@@ -74,7 +93,7 @@ const ChatPage = () => {
         </button>
       </header>
       <div className="flex-grow overflow-y-auto p-4 bg-gray-50">
-        <MessageList />
+        <MessageList messages={messages} currentUser={currentUser} />
       </div>
       <div className="p-4 border-t border-gray-300 bg-gray-100">
         <MessageInput onSendMessage={handleSendMessage} />
