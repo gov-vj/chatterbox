@@ -1,96 +1,15 @@
-import {useState, useEffect, useCallback, useRef} from 'react';
+import {useCallback} from 'react';
 import MessageList from '../components/MessageList';
 import MessageInput from '../components/MessageInput';
 import { supabase } from '../supabaseClient';
-import {RealtimeChannel, User} from '@supabase/supabase-js';
 import {useNavigate} from "react-router-dom";
-import { DbMessage, UserProfile } from '../types';
-
-const USER_ONE_EMAIL = import.meta.env.VITE_ALLOWED_USER_1_EMAIL;
-const USER_TWO_EMAIL = import.meta.env.VITE_ALLOWED_USER_2_EMAIL;
+import {useAutoScroll, useChatParticipants, useMessages} from '../hooks';
 
 const ChatPage = () => {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [otherUserProfile, setOtherUserProfile] = useState<UserProfile | null>(null);
-  const [messages, setMessages] = useState<DbMessage[]>([]);
   const navigate = useNavigate();
-  const messagesEndRef = useRef<null | HTMLDivElement>(null);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      const { data: { user }, error } = await supabase.auth.getUser();
-      if (error) {
-        console.error('Error fetching user:', error);
-      } else {
-        setCurrentUser(user);
-      }
-
-      if (!user) {
-        return;
-      }
-
-      const { data: otherUserProfile } = await supabase
-        .from('profiles')
-        .select('id, display_name, email')
-        .eq('email', user.email === USER_ONE_EMAIL ? USER_TWO_EMAIL : USER_ONE_EMAIL)
-        .single();
-      console.log('Other user profile:', otherUserProfile);
-      setOtherUserProfile(otherUserProfile);
-    };
-    fetchData();
-  }, []);
-
-  useEffect(() => {
-    if (!otherUserProfile || !currentUser) {
-      return;
-    }
-
-    const userId1 = currentUser.id;
-    const userId2 = otherUserProfile.id;
-
-    const fetchMessages = async () => {
-      const { data } = await supabase
-        .from('messages')
-        .select('*')
-        .or(`and(sender_id.eq.${userId1},receiver_id.eq.${userId2}),and(sender_id.eq.${userId2},receiver_id.eq.${userId1})`)
-        .order('created_at', { ascending: true });
-
-      setMessages(data as DbMessage[] ?? []);
-    };
-
-    fetchMessages();
-
-    const channelName = `chat-${[userId1, userId2].sort().join('-')}`;
-    const channel: RealtimeChannel = supabase
-      .channel(channelName)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'messages',
-      }, (payload) => {
-        console.log('ppp', payload)
-        setMessages((prevMessages) => [...prevMessages, payload.new as DbMessage])
-      })
-      .subscribe((status, err) => {
-        if (status === 'SUBSCRIBED') {
-          console.log(`Realtime channel '${channelName}' subscribed.`);
-        }
-        if (status === 'CHANNEL_ERROR') {
-          console.error(`Realtime channel error:`, err);
-        }
-        if (status === 'TIMED_OUT') {
-          console.warn(`Realtime channel timed out.`);
-        }
-      });
-
-    return () => void supabase.removeChannel(channel);
-  }, [currentUser, otherUserProfile]);
-
-
+  const { currentUser, otherUserProfile } = useChatParticipants();
+  const { messages } = useMessages(currentUser, otherUserProfile);
+  const messagesEndRef = useAutoScroll(messages);
   const handleSendMessage = useCallback(async (message: string) => {
     if (!currentUser || !otherUserProfile) {
       return;
@@ -105,16 +24,13 @@ const ChatPage = () => {
     const { error } = await supabase.from('messages').insert([messageToSend]);
     if (error) {
       console.error('Error sending message:', error);
-      alert(`Error sending message: ${error.message}`);
     }
   }, [currentUser, otherUserProfile]);
 
   const handleLogout = async () => {
-    console.log('Signing out...');
     const { error } = await supabase.auth.signOut();
     if(error) {
       console.error("Sign out error:", error);
-      alert(`Error signing out: ${error.message}`);
     } else {
       navigate('/login')
     }
