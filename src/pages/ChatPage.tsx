@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import {useState, useEffect, useCallback} from 'react';
 import MessageList from '../components/MessageList';
 import MessageInput from '../components/MessageInput';
 import { supabase } from '../supabaseClient';
@@ -51,7 +51,7 @@ const ChatPage = () => {
       const { data } = await supabase
         .from('messages')
         .select('*')
-        .or(`(sender_id = '${userId1}' AND receiver_id = '${userId2}'), (sender_id = '${userId2}' AND receiver_id = '${userId1}')`)
+        .or(`and(sender_id.eq.${userId1},receiver_id.eq.${userId2}),and(sender_id.eq.${userId2},receiver_id.eq.${userId1})`)
         .order('created_at', { ascending: true });
 
       setMessages(data as DbMessage[] ?? []);
@@ -59,9 +59,25 @@ const ChatPage = () => {
 
     fetchMessages();
   }, [currentUser, otherUserProfile]);
-  const handleSendMessage = (message: string) => {
-    console.log('Sending message:', message);
-  };
+
+
+  const handleSendMessage = useCallback(async (message: string) => {
+    if (!currentUser || !otherUserProfile) {
+      return;
+    }
+
+    const messageToSend = {
+      sender_id: currentUser.id,
+      receiver_id: otherUserProfile.id,
+      message: message,
+    };
+
+    const { error } = await supabase.from('messages').insert([messageToSend]);
+    if (error) {
+      console.error('Error sending message:', error);
+      alert(`Error sending message: ${error.message}`);
+    }
+  }, [currentUser, otherUserProfile]);
 
   const handleLogout = async () => {
     console.log('Signing out...');
