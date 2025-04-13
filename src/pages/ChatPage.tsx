@@ -2,7 +2,7 @@ import {useState, useEffect, useCallback} from 'react';
 import MessageList from '../components/MessageList';
 import MessageInput from '../components/MessageInput';
 import { supabase } from '../supabaseClient';
-import { User } from '@supabase/supabase-js';
+import {RealtimeChannel, User} from '@supabase/supabase-js';
 import {useNavigate} from "react-router-dom";
 import { DbMessage, UserProfile } from '../types';
 
@@ -44,10 +44,10 @@ const ChatPage = () => {
       return;
     }
 
-    const fetchMessages = async () => {
-      const userId1 = currentUser.id;
-      const userId2 = otherUserProfile.id;
+    const userId1 = currentUser.id;
+    const userId2 = otherUserProfile.id;
 
+    const fetchMessages = async () => {
       const { data } = await supabase
         .from('messages')
         .select('*')
@@ -58,6 +58,31 @@ const ChatPage = () => {
     };
 
     fetchMessages();
+
+    const channelName = `chat-${[userId1, userId2].sort().join('-')}`;
+    const channel: RealtimeChannel = supabase
+      .channel(channelName)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages',
+      }, (payload) => {
+        console.log('ppp', payload)
+        setMessages((prevMessages) => [...prevMessages, payload.new as DbMessage])
+      })
+      .subscribe((status, err) => {
+        if (status === 'SUBSCRIBED') {
+          console.log(`Realtime channel '${channelName}' subscribed.`);
+        }
+        if (status === 'CHANNEL_ERROR') {
+          console.error(`Realtime channel error:`, err);
+        }
+        if (status === 'TIMED_OUT') {
+          console.warn(`Realtime channel timed out.`);
+        }
+      });
+
+    return () => void supabase.removeChannel(channel);
   }, [currentUser, otherUserProfile]);
 
 
