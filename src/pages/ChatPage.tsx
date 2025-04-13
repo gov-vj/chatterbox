@@ -1,4 +1,4 @@
-import {useState, useEffect, useCallback} from 'react';
+import {useState, useEffect, useCallback, useRef} from 'react';
 import MessageList from '../components/MessageList';
 import MessageInput from '../components/MessageInput';
 import { supabase } from '../supabaseClient';
@@ -14,6 +14,11 @@ const ChatPage = () => {
   const [otherUserProfile, setOtherUserProfile] = useState<UserProfile | null>(null);
   const [messages, setMessages] = useState<DbMessage[]>([]);
   const navigate = useNavigate();
+  const messagesEndRef = useRef<null | HTMLDivElement>(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -134,7 +139,7 @@ const ChatPage = () => {
         </button>
       </header>
       <div className="flex-grow overflow-y-auto p-4 bg-gray-50">
-        <MessageList messages={messages} currentUser={currentUser} />
+        <MessageList messages={messages} currentUser={currentUser} messagesEndRef={messagesEndRef} />
       </div>
       <div className="p-4 border-t border-gray-300 bg-gray-100">
         <MessageInput onSendMessage={handleSendMessage} />

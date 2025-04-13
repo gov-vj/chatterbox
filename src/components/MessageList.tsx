@@ -1,12 +1,14 @@
 import { DbMessage } from '../types';
 import { User } from '@supabase/supabase-js';
+import {RefObject} from "react";
 
 interface MessageListProps {
   messages: DbMessage[];
   currentUser: User | null;
+  messagesEndRef: RefObject<HTMLDivElement | null>;
 }
 
-const MessageList = ({ messages, currentUser }: MessageListProps) => {
+const MessageList = ({ messages, currentUser, messagesEndRef }: MessageListProps) => {
   if (messages.length === 0 || !currentUser) {
     return <p className="text-center text-gray-500 italic">No messages yet. Start the conversation!</p>;
   }
@@ -22,6 +24,7 @@ const MessageList = ({ messages, currentUser }: MessageListProps) => {
             </div>
           </div>
         )})}
+      <div ref={messagesEndRef} />
     </div>
   );
 };
