@@ -96,4 +96,4 @@ npm test
 ```bash
 npm run cypress
 ```
-- `chat.cy.js` may fail because event may not be received. Run it again
+- `chat.cy.js` may fail because event may not be received in time. Run it again
