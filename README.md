@@ -16,7 +16,7 @@ React, TypeScript, Vite, Supabase, Node.js (v23.11.0+), npm, Tailwind CSS, Vites
 
 ```bash
 git clone git@github.com:gov-vj/chatterbox.git
-cd chatterbox-app
+cd chatterbox
 npm install
 ```
 
