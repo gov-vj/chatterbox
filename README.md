@@ -91,9 +91,10 @@ npm test
 ```
 
 ## End-to-End Tests 
-- Open `cypress.env.json`
-- Update the value
+- Open `cypress.env.json` and `cypress.config.cjs`
+- Update the values
 ```bash
+npm run dev
 npm run cypress
 ```
 - `chat.cy.js` may fail because event may not be received in time. Run it again
